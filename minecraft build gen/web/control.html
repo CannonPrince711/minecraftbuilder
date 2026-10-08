@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RL Build Generator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 29 9.5 16 17 3 9.5z' fill='%236cbf5a'/%3E%3Cpath d='M3 9.5 16 17v14L3 23.5z' fill='%238a6a3c'/%3E%3Cpath d='M29 9.5 16 17v14l13-7.5z' fill='%236b5232'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="control.css">
+</head>
+<body class="cc-body">
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 29 9.5 16 17 3 9.5z" fill="#6cbf5a"/><path d="M3 9.5 16 17v14L3 23.5z" fill="#8a6a3c"/><path d="M29 9.5 16 17v14l13-7.5z" fill="#6b5232"/></svg>
+    <span>RL Build Generator <span class="muted sub">Control Center</span></span>
+  </div>
+  <div class="top-actions">
+    <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText">Connecting…</span></span>
+    <a class="button primary" href="/">Open Builder</a>
+    <button id="quitBtn" title="Stop the program">Quit</button>
+  </div>
+</header>
+
+<main class="cc">
+  <section class="card cc-hero">
+    <div>
+      <h1>What do you want to build?</h1>
+      <p class="muted">Type an idea and jump straight into the Builder, or manage the program below.</p>
+    </div>
+    <form class="quick" id="quickForm">
+      <input id="quickPrompt" placeholder="e.g. an abandoned spruce watchtower" aria-label="Build idea">
+      <button class="primary big" type="submit">Build it</button>
+    </form>
+  </section>
+
+  <section class="stats" aria-label="Overview">
+    <div class="stat card"><span class="stat-label">Structure types trained</span><b id="statTrained">–</b><span class="muted" id="statTrainedSub"></span></div>
+    <div class="stat card"><span class="stat-label">Builds made this session</span><b id="statBuilds">–</b><span class="muted">since the program started</span></div>
+    <div class="stat card"><span class="stat-label">Minecraft worlds found</span><b id="statWorlds">–</b><span class="muted" id="statWorldsSub"></span></div>
+    <div class="stat card"><span class="stat-label">Disk used</span><b id="statDisk">–</b><span class="muted">models, output, your types</span></div>
+  </section>
+
+  <div class="cc-grid">
+    <section class="card cc-models">
+      <div class="card-head">
+        <h2>Models</h2>
+        <button id="trainMissingBtn">Train all missing</button>
+      </div>
+      <p class="muted small">Each structure type has its own trained agent. Upload your own schematics in the Builder's Train tab to add types.</p>
+      <div id="modelList" class="model-list"></div>
+    </section>
+
+    <section class="card cc-companions">
+      <div class="card-head"><h2>Build Scraper &amp; Schematic Viewer</h2></div>
+      <p class="muted small">They share file formats with this program (.schem, .schematic, .litematic, .nbt). Scrape builds from your worlds, then train on them here.</p>
+      <div id="companionList" class="companion-list"></div>
+      <div class="sys-actions">
+        <a class="button" href="/#train" id="importLink">Train on scraped builds</a>
+        <span class="muted small" id="importInfo"></span>
+      </div>
+    </section>
+
+    <section class="card cc-folders">
+      <div class="card-head"><h2>Folders</h2></div>
+      <div id="folderGrid" class="folder-grid"></div>
+    </section>
+
+    <section class="card cc-activity">
+      <div class="card-head"><h2>Activity</h2><span class="muted small" id="activityCount"></span></div>
+      <ol id="activity" class="activity" aria-live="polite"></ol>
+    </section>
+
+    <section class="card cc-worlds">
+      <div class="card-head"><h2>Worlds</h2></div>
+      <div id="worldList" class="world-list"></div>
+    </section>
+
+    <section class="card cc-settings">
+      <div class="card-head"><h2>Settings</h2></div>
+      <form id="settingsForm" class="settings-form">
+        <label class="field">Default Minecraft version
+          <select id="setVersion"></select>
+        </label>
+        <label class="field">WorldEdit schematics folder
+          <input id="setWorldedit" placeholder="Auto-detect">
+          <small class="muted" id="worldeditHint"></small>
+        </label>
+        <label class="field">MineDojo Python (optional)
+          <input id="setPython" placeholder="Auto: ~/minedojo inside WSL">
+        </label>
+        <label class="field">Build Scraper / Schematic Viewer folder
+          <input id="setCompanions" placeholder="Auto-detect next to this program">
+        </label>
+        <label class="field">Where Build Scraper saves files
+          <input id="setImport" placeholder="Your Downloads folder">
+        </label>
+        <label class="check"><input type="checkbox" id="setBuilderFirst"> Open the Builder instead of this page on start</label>
+        <div class="form-actions"><span class="status" id="settingsStatus"></span><button class="primary" type="submit">Save settings</button></div>
+      </form>
+    </section>
+
+    <section class="card cc-system">
+      <div class="card-head"><h2>System</h2></div>
+      <dl class="sysinfo" id="sysinfo"></dl>
+      <div class="sys-actions">
+        <button id="guideBtn">Open the guide</button>
+        <button id="dojoCheckBtn">Check MineDojo setup</button>
+      </div>
+      <pre class="log" id="dojoOut" hidden></pre>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<script type="module" src="control.js"></script>
+</body>
+</html>

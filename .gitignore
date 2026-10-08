@@ -1,0 +1,5 @@
+node_modules/
+# Build copies and binaries; rebuild with node tools/build.mjs [--exe]
+BuildScraper/app/site/
+BuildScraper/dist/artifact.html
+BuildScraper/dist/*.exe

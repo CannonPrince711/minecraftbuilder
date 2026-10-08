@@ -1,0 +1,293 @@
+MINECRAFT RL BUILD GENERATOR - HOW TO USE
+=========================================
+
+Describe a build, preview it in 3D, and get it into Minecraft (any version
+from 1.12.2 to the latest, 26.3) as a WorldEdit schematic or a data pack.
+It can also learn new kinds of builds from your own schematics.
+
+
+NEEDS
+-----
+- Node.js 18 or newer (https://nodejs.org)
+- Minecraft Java Edition 1.12.2 - 26.3
+- Optional: WorldEdit (for .schem files) or Litematica (.litematic)
+- Optional: Build Scraper and Schematic Viewer (see "BUILD SCRAPER &
+  SCHEMATIC VIEWER" below)
+- Optional: MineDojo (for real renders + prompt ranking, see the end)
+
+
+QUICK START
+-----------
+start.bat is the only thing you need to run.
+
+1. Double-click start.bat. The program window opens (the Control
+   Center). A small black window opens too: keep it open while you use
+   the program; closing it (or pressing Quit) stops everything.
+2. Type an idea in "What do you want to build?" and press "Build it",
+   or press "Open Builder".
+3. In the Builder: pick your Minecraft version in Settings, adjust
+   anything you like, press Generate. Drag the 3D previews to turn
+   them; the Layers slider lets you look inside.
+4. Get it into Minecraft (step "IN MINECRAFT" below).
+
+The window is Microsoft Edge (or Chrome) in "app mode", so it looks like
+a normal program. If neither is installed it opens in your browser at
+http://localhost:4321. Double-clicking start.bat again just brings the
+window back.
+
+
+CONTROL CENTER (the program window)
+-----------------------------------
+- Status: running / uptime. Quit stops the program.
+- Overview: types trained, builds made, worlds found, disk used.
+- Models: every structure type with its score; Train / Retrain buttons
+  with progress, and "Train all missing".
+- Folders: one click opens Output, Schematics, WorldEdit, Minecraft
+  saves, Models or Your types in Explorer.
+- Activity: everything the program did (builds, installs, training,
+  errors), live.
+- Worlds: your Minecraft worlds, with a button to open each folder.
+- Settings: default Minecraft version, your WorldEdit schematics folder
+  (for "Send to WorldEdit"), MineDojo Python, and whether to open the
+  Builder instead of the Control Center on start.
+- System: versions, "Open the guide", "Check MineDojo setup".
+
+All five built-in types come already trained: house, watchtower,
+step pyramid, gate arch, castle wall.
+
+
+WRITING PROMPTS
+---------------
+The prompt fills in the Settings. Anything it understood shows as chips
+under the box. You can change any setting afterwards.
+
+  What         house, cottage, cabin, hut / tower, watchtower, castle /
+               pyramid, temple / arch, gate, portal / wall, rampart
+               ...or the name of a type you taught it (see below)
+  Materials    oak, wooden / spruce, dark, nordic / birch, white /
+               desert, sand, egyptian / cherry, pink, japanese
+  Roof         flat, modern / gable, pitched / hip, pyramid roof
+  Size         small, big, tall, short, wide, narrow, 7x9, 8 tall, 9 wide
+  How many     3 towers, two houses, a few huts
+  Variety      neat, clean (tidy)  /  varied, wild (more different)
+
+Examples:
+  a small cherry house with a gable roof
+  big egyptian pyramid
+  two 7x9 birch cottages
+  a few oak archways, varied
+
+If you name something it doesn't know yet ("a windmill"), it tells you
+and offers to learn it from your schematics.
+
+
+REALISM SLIDERS
+---------------
+Under Settings there is a Realism box with seven sliders (0-100). They add
+finishing touches after the AI has built the structure, and the 3D
+previews update as you move them (no need to press Generate again).
+Downloads and Install always use the current slider values.
+
+  Weathering        moss and cracks on stone blocks
+  Block variety     mixes in similar blocks (andesite in stone walls,
+                    stripped wood in plank walls...) like real builders do
+  Exterior details  path to the door, lanterns beside it, shutters
+                    (trapdoors) next to windows
+  Interior          crafting table, chests, barrels, bookshelves, furnace,
+                    carpet and a lantern on every floor
+  Nature            grass and flowers around the build, bushes at the
+                    corners, vines on the walls
+  Ruin              blocks go missing (more near the top), windows break,
+                    cobwebs inside
+  Physics           structural support: anything without enough support
+                    falls straight down and lands as rubble (glass
+                    shatters). Higher = stricter: at the top, overhangs
+                    and spans longer than ~2 stone / 3 wood blocks fail.
+                    Sound builds stand; it matters most together with
+                    Ruin (roofs and floors cave in instead of floating).
+                    Cards show "physics: N fell".
+
+Presets: Clean (off), Lived-in, Old village, Overgrown, Abandoned ruin.
+Prompt words set them too: realistic, detailed, cozy/furnished,
+old/mossy/weathered, overgrown, abandoned/ruined, collapsed, sturdy,
+textured.
+  e.g.  an abandoned spruce watchtower      a cozy furnished oak cottage
+
+The same build + same sliders always gives the same result. With
+nature/details on, a grass base is added under the whole schematic so
+//paste doesn't leave holes in the ground around it.
+Older versions get stand-ins (e.g. torch instead of lantern before 1.14,
+grass path instead of dirt path before 1.17).
+
+Command line:
+  start.bat generate --prompt "oak house" --realism "abandoned ruin"
+  start.bat generate --type tower --realism "40,50,80,60,30,0,50"
+     (weathering,variety,details,interior,nature,ruin,physics)
+
+
+IN MINECRAFT
+------------
+Option A - WorldEdit schematics (best for servers and big builds)
+  Fastest: press "Send to WorldEdit" in the Builder. It copies the files
+  straight into your WorldEdit folder (found automatically for
+  singleplayer, or set it in Control Center -> Settings), then go to 3.
+  1. Or click "Download all .schem" (1.12.2 gives .schematic files).
+  2. Unzip into the WorldEdit schematics folder:
+       Singleplayer (Forge/Fabric): .minecraft\config\worldedit\schematics\
+       Server (Bukkit/Paper/Spigot): plugins\WorldEdit\schematics\
+  3. In game:  //schem load tower_1   then stand somewhere and  //paste
+     (1.12.2 / WorldEdit 6:  //schematic load tower_1  then  //paste)
+
+Option B - Data pack (no mods)
+  1. Pick your world under "Install straight into a world" and click
+     Install. Or click "Download data pack" and unzip it into
+     <world>\datapacks\  (1.12.2: unzip so the "data" folder lands in the
+     world folder; Install does this for you).
+  2. In game:  /reload
+  3. /function rlbuild:list          shows your builds
+  4. Stand on flat ground:  /function rlbuild:tower_1
+     The build appears 2 blocks toward +X/+Z from you.
+     WARNING: it first clears an 11x11x11 area to air.
+
+World not in the list? Other launchers (CurseForge, Prism, MultiMC...)
+keep worlds elsewhere: open "World not listed?" and paste the path of
+that instance's "saves" folder.
+
+Older versions: blocks that don't exist yet (cherry wood, deepslate,
+mud bricks) are swapped for similar older blocks automatically. The
+Settings box tells you what gets swapped.
+
+
+FILE TYPES
+----------
+Next to the download buttons, "File type" picks the format:
+  WorldEdit            .schem (Sponge v2) - WorldEdit 7+, FAWE, Amulet
+                       (.schematic on 1.12.2, for WorldEdit 6)
+  WorldEdit 7.3+       .schem (Sponge v3)
+  Litematica           .litematic - put it in .minecraft\schematics, press M
+  Structure block      .nbt - put it in <world>\generated\minecraft\structures,
+                       then /place template minecraft:<name> (1.19+)
+These are the same formats Build Scraper and Schematic Viewer use.
+Command line: --format auto | schem3 | litematic | nbt
+
+
+BUILD SCRAPER & SCHEMATIC VIEWER
+--------------------------------
+This program works with your Build Scraper and Schematic Viewer apps.
+They are found automatically if they're near this folder (e.g. on the
+Desktop); otherwise set their folder in Control Center -> Settings.
+
+- Open them: Control Center -> "Build Scraper & Schematic Viewer" ->
+  Open.
+- See a generated build in the Viewer: press "Viewer" on a build card.
+- Train on builds from your own worlds:
+    1. In Build Scraper, select builds in your world (or find them
+       online) and Download them. They go to your Downloads folder.
+    2. Here: Train tab -> "Or use files Build Scraper saved". Your
+       recent schematic files are listed; Build Scraper's own files are
+       marked "Build Scraper". Zips of many files work too.
+    3. Type a name for this kind of build (e.g. Castle), tick the files,
+       press "Use ticked files", then "Train it now".
+  Build Scraper saving somewhere else? Set "Where Build Scraper saves
+  files" in Control Center -> Settings.
+- Everything this program makes opens in Build Scraper and Schematic
+  Viewer, and everything they save can be uploaded here: .schem (v1-v3),
+  .schematic, .litematic, .nbt and .zip.
+
+
+TEACH IT YOUR OWN BUILDS (make anything)
+----------------------------------------
+1. Open the Train tab.
+2. Give the kind of build a name, e.g. Windmill.
+3. Drop in schematics of that kind: .schem (WorldEdit 7), .schematic
+   (MCEdit / WorldEdit 6), .litematic (Litematica), .nbt (structure block
+   files) or a .zip of them - or pick files Build Scraper saved (above).
+   3-10 examples of the same kind work best.
+   Builds bigger than 11 x 12 x 11 are scaled down to fit.
+4. Check the previews and the materials it found, then press
+   "Train it now" (about 2-3 minutes).
+5. Back on Create, prompts like "3 big windmills" now use your type,
+   built with your materials ("Your blocks" theme). You can still pick
+   a built-in theme instead.
+
+How it learns: every practice round it takes one of your examples,
+stretches or squashes it (keeping its edges), maybe mirrors or turns it,
+and is rewarded for rebuilding it while only seeing the rough shape. So
+it learns your style - what goes on corners, faces, tops - and can make
+new sizes and variants. With only one example you mostly get resized
+copies; more examples = more variety.
+
+Add more examples later under the same name, then press Retrain.
+Delete a type with its Delete button.
+
+
+TRAIN / RETRAIN
+---------------
+Train tab: each type has a card with Train / Retrain, a length
+(Quick 100, Standard 200, Long 400) and a live score chart.
+Scores of 95-100 mean it follows its rules (or your examples) closely.
+
+Command line:
+  start.bat train --type tower                    train (200 iterations)
+  start.bat train --type tower --iters 400        longer
+  start.bat train --type tower --resume --iters 100   keep training
+  start.bat train-all                             every type not trained yet
+
+
+COMMAND LINE (no website)
+-------------------------
+Open a terminal in this folder (in Explorer: type cmd in the address bar):
+  start.bat generate --prompt "3 tall spruce watchtowers" --mc 1.20
+  start.bat generate --type house --count 8 --roof gable --theme oak --mc 1.12.2 --world "My World"
+  start.bat help                                  all options
+
+Writes into the output folder:
+  output\schematics\          .schem / .schematic files
+  output\rlbuild_datapack\    data pack (1.12.2: rlbuild_functions_1.12)
+  output\gallery.html         3D preview
+
+
+
+MINEDOJO (optional): REAL RENDERS + PROMPT MATCHING
+---------------------------------------------------
+"Test in MineDojo" puts each build into MineDojo's real Minecraft,
+films it from 16 angles, and lets MineCLIP (a video-text AI trained on
+Minecraft YouTube videos) score how well it matches your prompt. Cards
+then show real in-game screenshots, best match first.
+
+MineDojo only runs on Linux/macOS, so on Windows it uses WSL:
+  1. PowerShell as admin:  wsl --install      then restart and open Ubuntu
+  2. In Ubuntu:
+       sudo apt update && sudo apt install -y openjdk-8-jdk xvfb python3.9 python3.9-venv
+       python3.9 -m venv ~/minedojo && source ~/minedojo/bin/activate
+       pip install minedojo git+https://github.com/MineDojo/MineCLIP
+  3. Download the MineCLIP "attn" checkpoint (link in the MineCLIP README
+     on GitHub) and save it as  minedojo\attn.pth  in this folder.
+  4. In the Control Center press "Check MineDojo setup". It should say
+     Ready.
+The first run starts Minecraft and can take a few minutes.
+Python installed somewhere else? Put its path in Control Center ->
+Settings -> MineDojo Python, e.g.  wsl /home/you/env/bin/python
+
+
+TROUBLESHOOTING
+---------------
+- start.bat says Node.js is not installed   install it, then run again.
+- "isn't trained yet"                press "Train it now" (about 3 min).
+- Page doesn't open                  go to http://localhost:4321 yourself.
+- /function says unknown function   run /reload; check /datapack list
+                                     shows rlbuild (1.13+).
+- Pack shows as incompatible         you picked the wrong version in
+                                     Settings; download again.
+- WorldEdit can't find the file      check the schematics folder path
+                                     and the name (no .schem in the command).
+- MineDojo "WSL is not set up"       follow the MINEDOJO steps above.
+- Upload says "Not an NBT file"      the file isn't a schematic, or it is
+                                     .litematic (export as .schem instead).
+
+
+CHANGE THE RULES
+----------------
+Built-in types: src\structures\*.js says where walls, corners, roofs and
+openings go; src\zones.js says which blocks each zone rewards. Edit,
+then retrain that type.

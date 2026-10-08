@@ -1,0 +1,405 @@
+<title>Build Scraper</title>
+<meta name="description" content="Pull builds out of Minecraft Java worlds (1.12.2 to latest) and save them as .schem files.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a workbench. Left: the map you pick from. Right: a narrow "inventory" column of settings and the export button. */
+:root {
+  --bg: #eef0ee;        /* smooth stone */
+  --panel: #f8f9f7;
+  --ink: #1f2423;       /* deepslate */
+  --muted: #5d6662;
+  --line: #cfd5d1;
+  --accent: #2b5fae;    /* lapis */
+  --accent-ink: #ffffff;
+  --grass: #3f7d32;
+  --warn: #9a5a00;
+  --danger: #b3261e;
+  --map-bg: #d9ddd9;
+  --sel: #f2c230;       /* gold selection */
+  --font-display: "Silkscreen", ui-monospace, "Courier New", monospace;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161a19; --panel: #1e2321; --ink: #e4e8e5; --muted: #9aa49f; --line: #333b38;
+  --accent: #6f9be6; --accent-ink: #0d1420; --grass: #7cbd6b; --warn: #e0a64a; --danger: #ff8a80; --map-bg: #0f1211; --sel: #f2c230;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #161a19; --panel: #1e2321; --ink: #e4e8e5; --muted: #9aa49f; --line: #333b38;
+  --accent: #6f9be6; --accent-ink: #0d1420; --grass: #7cbd6b; --warn: #e0a64a; --danger: #ff8a80; --map-bg: #0f1211; --sel: #f2c230;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 40px; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; }
+h1 { font: 400 26px/1.1 var(--font-display); margin: 0; letter-spacing: 0.02em; }
+header p { margin: 0; color: var(--muted); }
+nav.tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); flex-wrap: wrap; }
+nav.tabs button { font: 500 14px var(--font-body); background: none; border: 0; padding: 10px 14px; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+nav.tabs button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h2 { font: 600 17px/1.3 var(--font-body); margin: 0; text-wrap: balance; }
+h3 { font: 600 12px/1.3 var(--font-body); margin: 0; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.muted { color: var(--muted); }
+.mono, input[type="number"], .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+code { font-family: var(--font-mono); font-size: 0.92em; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+
+.drop { border: 2px dashed var(--line); border-radius: var(--r); background: var(--panel); padding: 28px 20px; display: grid; gap: 12px; justify-items: start; }
+.drop.over { border-color: var(--accent); }
+.drop.compact { padding: 10px 14px; border-width: 1px; grid-template-columns: auto 1fr; align-items: center; }
+.drop.compact .hint { display: none; }
+.drop.compact h2 { font-size: 14px; color: var(--muted); font-weight: 500; }
+.drop .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: 500 14px var(--font-body); border-radius: var(--r); padding: 8px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+a.btn { text-decoration: none; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.hint { font-size: 13px; color: var(--muted); }
+.hint ul { margin: 4px 0 0; padding-left: 18px; }
+
+.work { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .work { grid-template-columns: 1fr; } }
+.mapbox { display: grid; gap: 8px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .sep { flex: 1; }
+.toolbar label { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.toolbar input[type="number"] { width: 84px; }
+canvas#map { width: 100%; height: min(68vh, 640px); min-height: 320px; display: block; background: var(--map-bg); border-radius: var(--r); border: 1px solid var(--line); touch-action: none; cursor: grab; image-rendering: pixelated; }
+canvas#map.selecting { cursor: crosshair; }
+.readout { font: 13px var(--font-mono); color: var(--muted); min-height: 1.5em; display: flex; gap: 16px; flex-wrap: wrap; }
+
+aside.side { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 13px; color: var(--muted); }
+input[type="text"], input[type="url"], input[type="number"], select { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); width: 100%; min-width: 0; }
+.xyz { display: grid; grid-template-columns: 52px repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.xyz b { font: 500 12px var(--font-mono); color: var(--muted); text-align: center; }
+.xyz span { font-size: 13px; color: var(--muted); }
+.size { font: 500 14px var(--font-mono); }
+.checks { display: grid; gap: 6px; font-size: 14px; }
+.checks label { display: flex; gap: 8px; align-items: flex-start; }
+.checks small { color: var(--muted); display: block; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg label { flex: 1; text-align: center; padding: 6px 4px; font-size: 13px; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--ink); color: var(--bg); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }
+.status { font-size: 14px; }
+.status.err { color: var(--danger); }
+.status.ok { color: var(--grass); }
+.worldcard { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+.worldcard strong { font-size: 16px; }
+.pill { font: 500 12px var(--font-mono); padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.pill.warn { color: var(--warn); border-color: currentColor; }
+
+.result { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.mats { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 4px 8px; font-size: 13px; align-items: center; }
+.mats i { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--line); }
+.mats span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mats b { font: 400 13px var(--font-mono); color: var(--muted); }
+.howto { border-top: 1px solid var(--line); padding-top: 10px; font-size: 13px; }
+.howto summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.howto dl { margin: 8px 0 0; display: grid; gap: 4px; }
+.howto dt { font-weight: 600; margin-top: 6px; }
+.howto dd { margin: 0; color: var(--muted); }
+kbd { font-family: var(--font-mono); font-size: 0.9em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
+.errbtn { color: var(--danger); border-color: currentColor; margin-left: auto; order: 3; }
+.errpanel { border-color: var(--danger); }
+.errlist { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-height: 320px; overflow: auto; font-size: 14px; }
+.errlist li { min-width: 0; }
+.errlist .what { font-weight: 600; overflow-wrap: anywhere; }
+.errlist .why { color: var(--ink); }
+.errlist details { color: var(--muted); font: 12px var(--font-mono); }
+.errlist pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0 0; }
+.warnings { font-size: 13px; color: var(--warn); margin: 0; padding-left: 18px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.list { display: grid; gap: 8px; }
+.item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); }
+.item .name { font-weight: 500; overflow-wrap: anywhere; }
+.item .meta { grid-column: 2; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.item .acts { grid-row: 1 / span 2; grid-column: 3; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.urlrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.urlrow input { flex: 1 1 260px; }
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.btnrow > .primary { flex: 1 1 auto; justify-content: center; }
+#viewer-host iframe { display: block; width: 100%; height: max(520px, calc(100vh - 150px)); border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+#viewer-host .note { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 13px var(--font-body); border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 99px; padding: 3px 12px; cursor: pointer; }
+.chip b { font: 400 12px var(--font-mono); color: var(--muted); margin-left: 4px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip[aria-pressed="true"] b { color: var(--bg); }
+.pill.cat { font-family: var(--font-body); margin-left: 6px; white-space: nowrap; }
+input.catin { width: 13em; max-width: 100%; padding: 2px 6px; font-size: 13px; vertical-align: middle; }
+.item .saved { grid-column: 2; font-size: 13px; color: var(--grass); }
+footer { font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Build Scraper</h1>
+    <button class="btn small errbtn" id="err-btn" hidden aria-controls="err-panel" aria-expanded="false"></button>
+    <p>Pull a build out of any Minecraft Java world, 1.12.2 to the latest release, and save it as a <code>.schem</code>, <code>.litematic</code> or structure <code>.nbt</code> for WorldEdit, FAWE, Litematica or a structure block. Look at any build in 3D first.</p>
+  </header>
+
+  <section class="panel errpanel" id="err-panel" hidden aria-label="Problems">
+    <div class="toolbar">
+      <h2>Problems</h2>
+      <span class="sep"></span>
+      <button class="btn small" id="err-copy">Copy</button>
+      <button class="btn small" id="err-save">Download error log (.txt)</button>
+      <button class="btn small" id="err-clear">Clear</button>
+      <button class="btn small" id="err-close" aria-label="Close problems">Close</button>
+    </div>
+    <ol class="errlist" id="err-list"></ol>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-world" aria-selected="true" aria-controls="pane-world">From a world</button>
+    <button role="tab" id="tab-convert" aria-selected="false" aria-controls="pane-convert">Convert files</button>
+    <button role="tab" id="tab-web" aria-selected="false" aria-controls="pane-web">Search the web</button>
+    <button role="tab" id="tab-library" aria-selected="false" aria-controls="pane-library">My builds</button>
+    <button role="tab" id="tab-view" aria-selected="false" aria-controls="pane-view">View in 3D</button>
+    <button role="tab" id="tab-gen" aria-selected="false" aria-controls="pane-gen">Build generator</button>
+  </nav>
+
+  <!-- WORLD -->
+  <section id="pane-world" role="tabpanel" aria-labelledby="tab-world">
+    <div class="drop" id="world-drop" tabindex="0">
+      <h2>Open a world save</h2>
+      <div class="row">
+        <button class="btn primary" id="pick-folder">Choose world folder</button>
+        <button class="btn" id="pick-zip">Choose world .zip</button>
+        <button class="btn" id="try-sample">Try a sample world</button>
+      </div>
+      <div class="hint">Or drag the world folder or .zip here. Nothing is uploaded; the world is read inside your browser.
+        <ul>
+          <li>Windows: <code>%appdata%\.minecraft\saves</code></li>
+          <li>macOS: <code>~/Library/Application Support/minecraft/saves</code></li>
+          <li>Linux: <code>~/.minecraft/saves</code></li>
+        </ul>
+        Servers: use the world folder from the server (for example <code>world</code>, with <code>world_nether</code> as its own folder on Spigot/Paper).
+      </div>
+      <input type="file" id="folder-input" webkitdirectory multiple hidden>
+      <input type="file" id="zip-input" accept=".zip" hidden>
+    </div>
+
+    <div id="world-ui" hidden>
+      <div class="work">
+        <div class="mapbox">
+          <div class="worldcard" id="world-card"></div>
+          <div class="toolbar">
+            <label for="dim">Dimension <select id="dim"></select></label>
+            <button class="btn small" id="mode-pan" aria-pressed="false" title="Drag to move the map">Move map</button>
+            <button class="btn small" id="mode-select" aria-pressed="true" title="Drag to draw a box around your build">Select area</button>
+            <span class="sep"></span>
+            <label for="go-x">X <input type="number" id="go-x" step="1"></label>
+            <label for="go-z">Z <input type="number" id="go-z" step="1"></label>
+            <button class="btn small" id="go">Go</button>
+            <button class="btn small" id="go-player" hidden>Player</button>
+            <button class="btn small" id="go-spawn" hidden>Spawn</button>
+            <button class="btn small" id="zoom-out" aria-label="Zoom out">−</button>
+            <button class="btn small" id="zoom-in" aria-label="Zoom in">+</button>
+          </div>
+          <canvas id="map" class="selecting" aria-label="Top-down map of the world. Drag to select an area."></canvas>
+          <div class="readout" id="readout"><span>Drag on the map to draw a box around your build. Scroll to zoom.</span></div>
+        </div>
+
+        <aside class="side">
+          <div class="field">
+            <h3>Selection</h3>
+          </div>
+          <div class="xyz">
+            <span></span><b>X</b><b>Y</b><b>Z</b>
+            <span>From</span><input type="number" id="x0" aria-label="From X"><input type="number" id="y0" aria-label="From Y"><input type="number" id="z0" aria-label="From Z">
+            <span>To</span><input type="number" id="x1" aria-label="To X"><input type="number" id="y1" aria-label="To Y"><input type="number" id="z1" aria-label="To Z">
+          </div>
+          <div class="toolbar">
+            <span class="size" id="sel-size">No area selected</span>
+            <span class="sep"></span>
+            <button class="btn small" id="fit-y" title="Set the height range from the ground around the box to the tallest block inside it">Fit height</button>
+          </div>
+
+          <label class="field" for="name"><span>File name</span><input type="text" id="name" value="my-build" autocomplete="off"></label>
+          <label class="field" for="cat"><span>Category <small class="muted">(the folder it's saved in)</small></span><input type="text" id="cat" list="cat-list" autocomplete="off" placeholder="Other"></label>
+
+          <div class="field">
+            <span>Format</span>
+            <select id="fmt" aria-label="File format">
+              <option value="schem2">.schem (Sponge v2): WorldEdit, FAWE, Amulet</option>
+              <option value="schem3">.schem (Sponge v3): WorldEdit 7.3+</option>
+              <option value="litematic">.litematic: Litematica mod</option>
+              <option value="structure">.nbt: vanilla structure block</option>
+            </select>
+          </div>
+
+          <div class="checks">
+            <label><input type="checkbox" id="opt-be" checked><span>Keep chest contents, signs and banners<small>Block entity data</small></span></label>
+            <label><input type="checkbox" id="opt-ent" checked><span>Keep armor stands, item frames and mobs<small>Entities inside the box</small></span></label>
+            <label><input type="checkbox" id="opt-trim" checked><span>Trim empty air around the build</span></label>
+          </div>
+
+          <div class="btnrow">
+            <button class="btn primary" id="export" disabled>Save build</button>
+            <button class="btn" id="preview" disabled title="Look at the selected build in 3D before saving it">View in 3D</button>
+          </div>
+          <div class="progress" hidden id="prog"><i></i></div>
+          <div class="status" id="status" role="status"></div>
+          <div class="result" id="result" hidden></div>
+          <details class="howto" id="howto">
+            <summary>Load it in Minecraft</summary>
+            <dl>
+              <dt>WorldEdit or FAWE (.schem)</dt>
+              <dd>Put the file in <code>.minecraft/config/worldedit/schematics</code> (singleplayer) or <code>plugins/WorldEdit/schematics</code> (server). In game run <code>//schem load name</code>, stand where the corner should go, then <code>//paste</code>. <code>//paste -a</code> skips air.</dd>
+              <dt>Litematica (.litematic)</dt>
+              <dd>Put the file in <code>.minecraft/schematics</code>. Press <kbd>M</kbd>, choose Load Schematics, pick the file and press Load. A see-through hologram appears that you can build from block by block, or paste in creative.</dd>
+              <dt>Structure block (.nbt)</dt>
+              <dd>Put the file in <code>saves/YourWorld/generated/minecraft/structures</code>. Then run <code>/place template minecraft:name</code> (1.19+), or use a structure block in Load mode with the name <code>name</code>. Structure blocks only load up to 48 × 48 × 48.</dd>
+              <dt>MineDojo</dt>
+              <dd>Run <code>python minedojo_view.py name.schem</code> from the download. It builds the schematic in a MineDojo world, saves screenshots and an orbit GIF, then deletes that world.</dd>
+            </dl>
+          </details>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONVERT -->
+  <section id="pane-convert" role="tabpanel" aria-labelledby="tab-convert" hidden>
+    <div class="drop" id="conv-drop" tabindex="0">
+      <h2>Convert schematics</h2>
+      <div class="row">
+        <button class="btn primary" id="pick-files">Choose files</button>
+      </div>
+      <div class="hint">Works with old MCEdit <code>.schematic</code> files (pre-1.13 block IDs are converted), Litematica <code>.litematic</code>, structure block <code>.nbt</code>, and older <code>.schem</code> versions. You can also drop a <code>.zip</code> full of them.</div>
+      <input type="file" id="files-input" multiple accept=".schematic,.schem,.litematic,.nbt,.zip" hidden>
+    </div>
+    <div class="panel" id="conv-panel" hidden>
+      <div class="toolbar">
+        <h2>Files</h2>
+        <span class="sep"></span>
+        <select id="cfmt" aria-label="Output format" style="width:auto">
+          <option value="schem2">.schem v2</option>
+          <option value="schem3">.schem v3</option>
+          <option value="litematic">.litematic</option>
+          <option value="structure">structure .nbt</option>
+        </select>
+        <button class="btn primary small" id="conv-all">Save all</button>
+      </div>
+      <div class="status ok" id="conv-saved" role="status"></div>
+      <div class="list" id="conv-list"></div>
+    </div>
+  </section>
+
+  <!-- WEB -->
+  <section id="pane-web" role="tabpanel" aria-labelledby="tab-web" hidden>
+    <div style="display:grid;gap:16px">
+    <div class="panel">
+      <h2>Search for builds</h2>
+      <p class="muted" style="margin:0">Type what you're looking for. Search public GitHub projects, or one website you choose. Matching schematic files are listed so you can pick which to convert.</p>
+      <form class="urlrow" id="search-form">
+        <input type="text" id="search-q" placeholder="medieval castle" aria-label="Search terms">
+        <select id="search-cat" aria-label="Category" style="flex:0 1 200px"><option value="">Any category</option></select>
+        <select id="search-src" aria-label="Where to search" style="flex:0 1 220px">
+          <option value="github">Public GitHub projects</option>
+          <option value="site">A website I choose</option>
+        </select>
+        <button class="btn primary" type="submit" id="search-go">Search</button>
+      </form>
+      <div class="urlrow" id="site-row" hidden>
+        <input type="url" id="search-site" placeholder="https://example.com/schematics/  or  https://example.com/?s={q}" aria-label="Website to search">
+        <label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center">Pages <input type="number" id="search-pages" value="25" min="1" max="200" style="width:72px"></label>
+      </div>
+      <div class="hint" id="search-hint">The site search reads up to the number of pages you set, one page at a time, and only on that site. Put <code>{q}</code> in the address to start from the site's own search page.</div>
+      <div class="status" id="search-status" role="status"></div>
+      <div class="toolbar" id="search-actions" hidden>
+        <label><input type="checkbox" id="search-all" checked> Select all</label>
+        <span class="sep"></span>
+        <button class="btn small" id="search-stop" hidden>Stop</button>
+        <button class="btn primary small" id="search-fetch">Download and convert selected</button>
+      </div>
+      <div class="list" id="search-list"></div>
+    </div>
+    <div class="panel">
+      <h2 id="web-h">Grab schematics from a web page</h2>
+      <p class="muted" style="margin:0">Paste a link to a schematic file, a .zip, or a page that links to schematic files. Matching files are listed so you can pick which to convert.</p>
+      <form class="urlrow" id="web-form">
+        <input type="url" id="web-url" placeholder="https://example.com/builds/castle.schematic" required>
+        <button class="btn primary" type="submit" id="web-go">Find schematics</button>
+      </form>
+      <div class="note" id="web-note">Some sites block other pages from reading their files. When that happens, download the file in your browser and use the Convert tab, or run the command-line helper that comes with this tool: <code>node mcbs.mjs fetch URL</code>. Please follow each site's rules and only download builds you're allowed to use.</div>
+      <div class="status" id="web-status" role="status"></div>
+      <div class="toolbar" id="web-actions" hidden>
+        <label><input type="checkbox" id="web-all" checked> Select all</label>
+        <span class="sep"></span>
+        <button class="btn primary small" id="web-fetch">Download and convert selected</button>
+      </div>
+      <div class="list" id="web-list"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- LIBRARY: saved builds, one folder per category -->
+  <section id="pane-library" role="tabpanel" aria-labelledby="tab-library" hidden>
+    <div class="panel">
+      <div class="toolbar">
+        <h2>My builds</h2>
+        <span class="sep"></span>
+        <button class="btn small" id="lib-open" hidden>Open folder</button>
+        <button class="btn small" id="lib-change" hidden>Change folder</button>
+        <button class="btn small" id="lib-refresh">Refresh</button>
+      </div>
+      <div class="note" id="lib-where"></div>
+      <div id="lib-tools" style="display:grid;gap:12px">
+        <div class="urlrow">
+          <input type="search" id="lib-q" placeholder="Search your builds, e.g. castle or tower" aria-label="Search your builds">
+          <select id="lib-cat" aria-label="Category" style="flex:0 1 220px"><option value="">All categories</option></select>
+        </div>
+        <div class="chips" id="lib-chips"></div>
+        <div class="status" id="lib-status" role="status"></div>
+        <div class="list" id="lib-list"></div>
+      </div>
+    </div>
+  </section>
+  <!-- VIEW (the schematic viewer, inlined at build time) -->
+  <section id="pane-view" role="tabpanel" aria-labelledby="tab-view" hidden>
+    <div id="viewer-host"></div>
+  </section>
+
+  <!-- GENERATOR: the RL Build Generator in the "minecraft build gen" folder next to this project -->
+  <section id="pane-gen" role="tabpanel" aria-labelledby="tab-gen" hidden>
+    <div style="display:grid;gap:16px">
+    <div class="panel">
+      <h2>Minecraft RL Build Generator</h2>
+      <p class="muted" style="margin:0">A separate program in the <code>minecraft build gen</code> folder. A reinforcement-learning agent builds houses, watchtowers, step pyramids, gate arches and castle walls block by block from a short prompt such as <code>two 7x9 birch cottages</code>, and exports them as <code>.schem</code>, <code>.schematic</code> or a data pack for Java 1.12.2 to 26.3. It can also learn new build types from your own schematics.</p>
+      <div class="hint">To use it, double-click <code>start.bat</code> in that folder (needs Node.js 18 or newer). It runs on your computer at <code>http://127.0.0.1:4321</code> while its window stays open. Full steps are in <code>HOW_TO_USE.txt</code>.</div>
+      <div><a class="btn primary" id="gen-open" href="http://127.0.0.1:4321" target="_blank" rel="noopener">Open the generator</a></div>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2>Builds it has made</h2>
+      </div>
+      <p class="muted" style="margin:0">The schematics in <code>minecraft build gen/output/schematics</code>. The same builds are in its data pack, <code>output/rlbuild_datapack</code>, as <code>/function rlbuild:house_1</code> and so on.</p>
+      <div class="status" id="gen-status" role="status"></div>
+      <div class="list" id="gen-list"></div>
+    </div>
+    </div>
+  </section>
+
+  <footer>Runs entirely in your browser. Reads Anvil worlds from 1.12.2 through 26.x, including pre-1.13 numeric block IDs. Block entities from pre-1.13 worlds are upgraded where possible; check redstone and modded blocks after pasting.</footer>
+</div>

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schematic Viewer</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="icon-btn only-mobile" id="btnSidebar" title="Show panel" aria-label="Show panel">☰</button>
+  <div class="brand"><span class="logo" aria-hidden="true"></span><span>Schematic Viewer</span></div>
+  <div class="spacer"></div>
+  <button class="btn small problems-badge" id="btnProblems" title="Show problems" hidden></button>
+  <button class="btn primary" id="btnOpen">Open files</button>
+  <button class="icon-btn" id="btnTheme" title="Toggle light/dark" aria-label="Toggle light or dark theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <button class="icon-btn" id="btnHelp" title="Help" aria-label="Help">?</button>
+  <input type="file" id="fileInput" multiple accept=".schem,.schematic,.litematic,.nbt" hidden>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <section class="panel" id="panelFiles" hidden>
+      <h2>Files</h2>
+      <ul class="file-list" id="fileList"></ul>
+    </section>
+
+    <section class="panel" id="panelProblems" hidden>
+      <div class="row">
+        <h2>Problems <span class="muted" id="problemCount"></span></h2>
+        <div class="row">
+          <button class="btn small ghost" id="btnOpenLog" title="Open the log file the app keeps" hidden>Log file</button>
+          <button class="btn small ghost" id="btnCopyProblems" title="Copy all problems as text">Copy details</button>
+          <button class="btn small ghost" id="btnClearProblems">Clear</button>
+        </div>
+      </div>
+      <ul class="problem-list" id="problemList"></ul>
+    </section>
+
+    <section class="panel" id="panelInfo" hidden>
+      <h2>Build info</h2>
+      <dl class="info" id="info"></dl>
+    </section>
+
+    <section class="panel" id="panelView" hidden>
+      <h2>Layers</h2>
+      <div class="row">
+        <label for="yMax">Show up to layer</label><output id="yMaxOut"></output>
+      </div>
+      <input type="range" id="yMax" min="0" max="0" value="0">
+      <div class="row">
+        <label for="yMin">Starting from layer</label><output id="yMinOut"></output>
+      </div>
+      <input type="range" id="yMin" min="0" max="0" value="0">
+      <div class="row gap">
+        <label class="check"><input type="checkbox" id="singleLayer"> One layer at a time</label>
+      </div>
+      <div class="row gap">
+        <button class="btn small" id="layerDown" title="Previous layer ( [ )">▼ Layer</button>
+        <button class="btn small" id="layerUp" title="Next layer ( ] )">▲ Layer</button>
+        <button class="btn small ghost" id="layerAll">Show all</button>
+      </div>
+      <h2 class="sub">Display</h2>
+      <label class="check"><input type="checkbox" id="optAO" checked> Soft shadows</label>
+      <label class="check"><input type="checkbox" id="optGrid" checked> Ground grid</label>
+      <label class="check"><input type="checkbox" id="optBounds"> Outline of the schematic area</label>
+    </section>
+
+    <section class="panel grow" id="panelBlocks" hidden>
+      <div class="row">
+        <h2>Blocks <span class="muted" id="blockTotal"></span></h2>
+        <button class="btn small ghost" id="btnCsv" title="Download the materials list as a spreadsheet (CSV)">Export list</button>
+      </div>
+      <input type="search" id="blockSearch" placeholder="Search blocks…" aria-label="Search blocks">
+      <div class="row gap">
+        <button class="btn small ghost" id="showAll">Show all</button>
+        <button class="btn small ghost" id="hideAll">Hide all</button>
+        <span class="muted small">Untick to hide a block type</span>
+      </div>
+      <ul class="block-list" id="blockList"></ul>
+    </section>
+
+    <section class="panel hint" id="panelHint">
+      <h2>Getting started</h2>
+      <p>Open a build from the button above, or drop files anywhere on this page.</p>
+      <p class="muted">Supported: Sponge <b>.schem</b> (WorldEdit, FAWE, v1–v3), MCEdit/Schematica <b>.schematic</b> (1.12.2 and older), Litematica <b>.litematic</b> and structure-block <b>.nbt</b> files, from Minecraft 1.12.2 up to the latest version.</p>
+      <p class="muted">Files never leave your computer.</p>
+    </section>
+  </aside>
+
+  <main class="stage" id="stage">
+    <canvas id="canvas" tabindex="0" aria-label="3D view of the schematic"></canvas>
+
+    <div class="empty" id="empty">
+      <div class="empty-card">
+        <div class="big-logo" aria-hidden="true"></div>
+        <h1>View any Minecraft build in 3D</h1>
+        <p>Drop a <b>.schem</b>, <b>.schematic</b>, <b>.litematic</b> or <b>.nbt</b> file here</p>
+        <div class="row center gap">
+          <button class="btn primary" id="btnOpen2">Choose files</button>
+          <button class="btn" id="btnDemo">Try a demo build</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty" id="errorCard" hidden>
+      <div class="empty-card error-card" role="alert">
+        <div class="error-icon" aria-hidden="true">!</div>
+        <h1 id="errTitle">This file could not be opened</h1>
+        <p class="err-file" id="errFile"></p>
+        <p class="err-msg" id="errMsg"></p>
+        <p class="err-hint" id="errHint"></p>
+        <details class="pdetail" id="errDetailBox"><summary>Technical details</summary><pre id="errDetail"></pre></details>
+        <div class="row center gap">
+          <button class="btn primary" id="btnErrOpen">Open another file</button>
+          <button class="btn" id="btnErrCopy">Copy details</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar" id="toolbar" hidden>
+      <button class="btn small" data-view="iso" title="Angled view (1)">3D</button>
+      <button class="btn small" data-view="top" title="Top-down view (2)">Top</button>
+      <button class="btn small" data-view="front" title="Front view (3)">Front</button>
+      <button class="btn small" data-view="side" title="Side view (4)">Side</button>
+      <span class="sep"></span>
+      <button class="btn small" id="btnShot" title="Save a picture (P)">Screenshot</button>
+      <button class="btn small" id="btnFull" title="Full screen (F)">Full screen</button>
+    </div>
+
+    <div class="tooltip" id="tooltip" hidden></div>
+    <div class="hud muted small" id="hud" hidden>Drag to rotate · Right-drag or Shift-drag to move · Scroll to zoom</div>
+
+    <div class="overlay" id="overlay" hidden>
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div id="overlayText">Loading…</div>
+        <div class="progress"><div id="progressBar"></div></div>
+      </div>
+    </div>
+    <div class="drop-hint" id="dropHint" hidden><div>Drop to open</div></div>
+    <div class="toast" id="toast" role="status" hidden></div>
+  </main>
+</div>
+
+<dialog id="helpDialog">
+  <form method="dialog">
+    <h2>How to use</h2>
+    <ul class="help">
+      <li><b>Open</b> one or many files with <i>Open files</i>, or drag them onto the page. Switch between them in the <i>Files</i> list.</li>
+      <li><b>Rotate</b>: drag with the left mouse button (or one finger).</li>
+      <li><b>Move</b>: drag with the right mouse button, or hold Shift (two fingers on touch screens).</li>
+      <li><b>Zoom</b>: mouse wheel or pinch.</li>
+      <li><b>Inspect</b>: point at a block to see its name and position. Click it to find it in the block list.</li>
+      <li><b>Layers</b>: use the sliders or the <kbd>[</kbd> <kbd>]</kbd> keys to build up the schematic layer by layer.</li>
+      <li><b>Hide blocks</b>: untick a block in the list, e.g. to see through glass or remove the ground.</li>
+      <li><b>Shortcuts</b>: <kbd>1</kbd>–<kbd>4</kbd> camera views, <kbd>R</kbd> reset view, <kbd>P</kbd> screenshot, <kbd>F</kbd> full screen.</li>
+    </ul>
+    <p class="muted small">Blocks are drawn with solid colours that approximate their in-game look. Simple shapes (slabs, stairs, fences, panes, doors, plants…) are shown; complex models are simplified.</p>
+    <div class="row end"><button class="btn primary">Got it</button></div>
+  </form>
+</dialog>
+
+<script src="js/problems.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="js/nbt.js"></script>
+<script src="js/legacy.js"></script>
+<script src="js/formats.js"></script>
+<script src="js/blocks.js"></script>
+<script src="js/mesher.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "pack": {
+    "description": "RL-generated builds: /function rlbuild:list",
+    "min_format": 121,
+    "max_format": 999
+  }
+}

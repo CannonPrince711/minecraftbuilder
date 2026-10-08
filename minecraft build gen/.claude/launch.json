@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "web", "runtimeExecutable": "node", "runtimeArgs": ["src/launcher.js", "start", "--no-open"], "port": 4321 }
+  ]
+}

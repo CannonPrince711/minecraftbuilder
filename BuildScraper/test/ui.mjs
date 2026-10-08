@@ -1,0 +1,33 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+import { readAny } from '../src/formats.js';
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+await page.goto('file:///home/claude/mcbs/dist/index.html');
+await page.click('#try-sample');
+await page.waitForTimeout(4000);
+await page.screenshot({ path: '/tmp/claude-0/shot1.png' });
+const box = await page.locator('#map').boundingBox();
+const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+await page.mouse.move(cx - 60, cy - 60); await page.mouse.down(); await page.mouse.move(cx + 40, cy + 30, { steps: 5 }); await page.mouse.up();
+await page.waitForTimeout(300);
+console.log('sel', await page.locator('#sel-size').textContent(), await page.inputValue('#y0'), await page.inputValue('#y1'));
+const dlp = page.waitForEvent('download', { timeout: 15000 }).catch(() => null); await page.click('#export'); const dl = await dlp; if (!dl) { console.log('NO DL', await page.locator('#status').textContent()); process.exit(1); }
+const p = '/tmp/claude-0/out.schem'; await dl.saveAs(p);
+await page.waitForTimeout(500);
+console.log('status', await page.locator('#status').textContent());
+await page.screenshot({ path: '/tmp/claude-0/shot2.png' });
+const s = await readAny(new Uint8Array(fs.readFileSync(p)));
+console.log('schem', s.width, s.height, s.length, s.palette.length, s.dataVersion);
+// convert tab
+await page.click('#tab-convert');
+await page.setInputFiles('#files-input', ['test/fixtures/viking-house1.schematic', 'test/fixtures/smallhouse1.schem']);
+await page.waitForTimeout(800);
+await page.screenshot({ path: '/tmp/claude-0/shot3.png' });
+await page.setViewportSize({ width: 400, height: 800 });
+await page.click('#tab-world');
+await page.waitForTimeout(500);
+await page.screenshot({ path: '/tmp/claude-0/shot4.png', fullPage: true });
+console.log('errors', errs);
+await browser.close();

@@ -1,0 +1,25 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+const errs = []; page.on('pageerror', e => errs.push(e.message));
+await page.goto('http://127.0.0.1:8765/');
+await page.click('#tab-web');
+await page.fill('#search-q', 'house');
+await page.selectOption('#search-src', 'site');
+await page.fill('#search-site', 'http://127.0.0.1:8088/');
+await page.fill('#search-pages', '10');
+await page.click('#search-go');
+await page.waitForFunction(() => !document.querySelector('#search-go').disabled, null, { timeout: 60000 });
+console.log('search:', await page.locator('#search-status').textContent());
+console.log(await page.locator('#search-list .name').allTextContents());
+await page.click('#search-fetch');
+await page.waitForFunction(() => /added to the Convert/.test(document.querySelector('#search-status').textContent), null, { timeout: 60000 });
+console.log('fetch:', await page.locator('#search-status').textContent());
+await page.screenshot({ path: '/tmp/claude-0/s1.png', fullPage: true });
+// web link via helper on a CORS-blocked page
+await page.fill('#web-url', 'http://127.0.0.1:8088/builds/viking.html');
+await page.click('#web-go'); await page.waitForTimeout(4000);
+console.log('web:', await page.locator('#web-status').textContent());
+await page.click('#tab-convert'); await page.selectOption('#cfmt', 'litematic');
+const items = await page.locator('#conv-list .name').allTextContents(); console.log('convert items', items);
+console.log(errs); await browser.close();

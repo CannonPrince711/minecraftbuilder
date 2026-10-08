@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RL Build Generator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 29 9.5 16 17 3 9.5z' fill='%236cbf5a'/%3E%3Cpath d='M3 9.5 16 17v14L3 23.5z' fill='%238a6a3c'/%3E%3Cpath d='M29 9.5 16 17v14l13-7.5z' fill='%236b5232'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 29 9.5 16 17 3 9.5z" fill="#6cbf5a"/><path d="M3 9.5 16 17v14L3 23.5z" fill="#8a6a3c"/><path d="M29 9.5 16 17v14l13-7.5z" fill="#6b5232"/></svg>
+    <span>RL Build Generator</span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="create" aria-selected="true">Create</button>
+    <button role="tab" data-tab="train" aria-selected="false">Train</button>
+    <button role="tab" data-tab="help" aria-selected="false">How to use</button>
+  </nav>
+  <a class="button cc-link" href="/control.html" title="Program status, models, folders and settings">Control Center</a>
+</header>
+
+<main>
+  <!-- ============ CREATE ============ -->
+  <section id="tab-create" class="tab">
+    <div class="hero card">
+      <h1>What should we build?</h1>
+      <form id="promptForm" class="prompt-row">
+        <textarea id="prompt" rows="2" placeholder="Describe it, e.g. &quot;3 tall spruce watchtowers&quot; or &quot;a small cherry house with a gable roof&quot;"></textarea>
+        <button id="generateBtn" class="primary big" type="submit">Generate</button>
+      </form>
+      <div class="examples" id="examples"></div>
+      <div class="understood" id="understood" aria-live="polite"></div>
+      <div class="hint" id="unknownHint" hidden>
+        <span id="unknownText"></span>
+        <button type="button" id="teachBtn">Teach it with schematics</button>
+      </div>
+    </div>
+
+    <div class="card settings">
+      <div class="settings-head">
+        <h2>Settings</h2>
+        <span class="muted">Your prompt fills these in. Change anything you like.</span>
+      </div>
+      <div class="grid-fields">
+        <label class="field wide-field">Minecraft version
+          <select id="version"></select>
+        </label>
+        <label class="field">Structure
+          <select id="type"></select>
+        </label>
+        <label class="field">Theme
+          <select id="theme"></select>
+        </label>
+        <label class="field" id="variantField">Style
+          <select id="variant"></select>
+        </label>
+        <label class="field">Width
+          <select id="width"></select>
+        </label>
+        <label class="field" id="depthField">Depth
+          <select id="depth"></select>
+        </label>
+        <label class="field" id="heightField">Height
+          <select id="height"></select>
+        </label>
+        <label class="field">How many
+          <select id="count"></select>
+        </label>
+        <label class="field slider-field">Variety <span class="muted" id="tempLabel"></span>
+          <input type="range" id="temp" min="0" max="1" step="0.05" value="0.3">
+        </label>
+      </div>
+      <p class="version-note" id="versionNote"></p>
+    </div>
+
+    <div class="card realism">
+      <div class="settings-head">
+        <h2>Realism</h2>
+        <span class="muted">Finishing touches added after the AI builds. Changes show instantly.</span>
+        <label class="preset">Preset
+          <select id="preset"></select>
+        </label>
+      </div>
+      <div class="sliders" id="sliders"></div>
+    </div>
+
+    <div class="banner" id="untrained" hidden>
+      <span id="untrainedText"></span>
+      <button class="primary" id="trainNowBtn">Train it now</button>
+    </div>
+
+    <div class="results-head" id="resultsHead" hidden>
+      <div>
+        <h2 id="resultsTitle"></h2>
+        <span class="muted" id="resultsSub"></span>
+      </div>
+      <div class="actions">
+        <label class="format-pick">File type
+          <select id="format" title="Same formats as Build Scraper and Schematic Viewer"></select>
+        </label>
+        <a class="button primary" id="dlSchems" download>Download all schematics</a>
+        <a class="button" id="dlPack" download>Download data pack</a>
+        <button id="weBtn" title="Copy the schematics straight into your WorldEdit schematics folder">Send to WorldEdit</button>
+        <button id="dojoBtn" title="Place the builds in MineDojo's real Minecraft, film them, and rank them by how well they match your prompt (MineCLIP)">Test in MineDojo</button>
+      </div>
+    </div>
+    <p class="dojo-status" id="dojoStatus" aria-live="polite" hidden></p>
+
+    <div class="card install" id="installCard" hidden>
+      <div>
+        <h3>Install straight into a world</h3>
+        <span class="muted" id="installHint"></span>
+      </div>
+      <div class="install-row">
+        <select id="world"></select>
+        <button id="installBtn">Install</button>
+      </div>
+      <details class="custom-saves">
+        <summary>World not listed? (other launchers)</summary>
+        <div class="install-row">
+          <input id="savesDir" placeholder="Path to a saves folder, e.g. C:\Users\you\curseforge\minecraft\Instances\X\saves">
+          <button id="savesBtn">Find worlds</button>
+        </div>
+      </details>
+      <p class="status" id="installStatus" aria-live="polite"></p>
+    </div>
+
+    <div id="results" class="results"></div>
+
+    <div class="empty" id="empty">
+      <p><strong>Nothing built yet.</strong> Type what you want above, or tap an example, then press Generate.</p>
+      <p class="muted">Each build is placed block by block by a neural network trained with reinforcement learning.</p>
+    </div>
+  </section>
+
+  <!-- ============ TRAIN ============ -->
+  <section id="tab-train" class="tab" hidden>
+    <div class="card intro">
+      <h1>Train the builders</h1>
+      <p class="muted">Each structure type has its own model. Training lets the agent practise hundreds of builds and learn from the rules in <code>src/structures/</code> and <code>src/zones.js</code>. 200 iterations take about 3 minutes and reach scores around 98&ndash;100.</p>
+    </div>
+    <div class="card upload">
+      <h2>Teach it your own builds</h2>
+      <p class="muted">Upload schematics of anything: a windmill, a ship, a statue, a shop. The agent learns your style from them and can then build new sizes and variations with your materials. 3&ndash;10 examples of the same kind work best. Supports <code>.schem</code> (WorldEdit 7, v1&ndash;v3), <code>.schematic</code> (MCEdit / WorldEdit 6), <code>.litematic</code> (Litematica), <code>.nbt</code> (structure blocks) and <code>.zip</code> files of them &mdash; everything Build Scraper saves. Builds larger than 11&times;12&times;11 are scaled down.</p>
+      <div class="upload-row">
+        <label class="field">Name of this kind of build
+          <input id="customName" placeholder="e.g. Windmill" maxlength="40">
+        </label>
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="customFiles" multiple accept=".schem,.schematic,.litematic,.nbt,.zip">
+          <span id="dropText">Drop schematic files here, or click to choose</span>
+        </label>
+        <button class="primary" id="uploadBtn">Upload</button>
+      </div>
+      <p class="status" id="uploadStatus" aria-live="polite"></p>
+      <div class="local-import" id="localImport">
+        <div class="local-head">
+          <b>Or use files Build Scraper saved</b>
+          <span class="muted" id="localDir"></span>
+          <button type="button" id="localRefresh">Refresh</button>
+          <button type="button" id="openScraper" hidden>Open Build Scraper</button>
+        </div>
+        <div class="local-list" id="localList"></div>
+        <button class="primary" type="button" id="localUse" hidden>Use ticked files</button>
+      </div>
+      <div id="uploadResult" hidden>
+        <div class="results" id="uploadPreview"></div>
+        <div class="upload-actions"><span class="muted" id="themeInfo"></span><button class="primary" id="trainCustomBtn">Train it now</button></div>
+      </div>
+    </div>
+    <div class="train-grid" id="trainGrid"></div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <section id="tab-help" class="tab" hidden>
+    <div class="card prose">
+      <h1>How to use your builds</h1>
+
+      <h2>1. Pick your Minecraft version</h2>
+      <p>Choose it in <b>Settings</b> before downloading. Files are made for exactly that version, from 1.12.2 up to the latest. On older versions, blocks that didn't exist yet (cherry wood, deepslate, mud bricks) are swapped for similar older blocks.</p>
+
+      <h2>2a. Schematics + WorldEdit (best for servers and big builds)</h2>
+      <ol>
+        <li>Install <b>WorldEdit</b> for your version (Forge, Fabric, or as a Bukkit/Paper plugin).</li>
+        <li>Download the schematics. Unzip them into the WorldEdit schematics folder:
+          <ul>
+            <li>Singleplayer (Forge/Fabric): <code>.minecraft/config/worldedit/schematics/</code></li>
+            <li>Server (Bukkit/Paper/Spigot): <code>plugins/WorldEdit/schematics/</code></li>
+          </ul>
+        </li>
+        <li>In game: <code>//schem load house_1</code>, then stand where you want it and <code>//paste</code>.</li>
+        <li>1.12.2 uses <code>.schematic</code> files with WorldEdit 6: <code>//schematic load house_1</code>, then <code>//paste</code>.</li>
+      </ol>
+
+      <h2>2b. Data pack (no mods needed)</h2>
+      <ol>
+        <li>Click <b>Install</b> and pick your world, or download the data pack and unzip it into <code>&lt;world&gt;/datapacks/</code>.</li>
+        <li>In game: <code>/reload</code>, then <code>/function rlbuild:list</code> to see your builds.</li>
+        <li>Stand on flat ground and run e.g. <code>/function rlbuild:house_1</code>. It appears 2 blocks toward +X/+Z.</li>
+        <li><b>Careful:</b> it first clears an 11&times;11&times;11 area to air.</li>
+        <li>1.12.2 has no data packs: the zip contains a <code>data/functions</code> folder that goes into the world folder. Install does this for you.</li>
+      </ol>
+
+      <h2>Build Scraper &amp; Schematic Viewer</h2>
+      <p>This program works together with <b>Build Scraper</b> (pulls builds out of your worlds or finds them online) and <b>Schematic Viewer</b>. All three read and write the same files: <code>.schem</code> v2/v3, <code>.schematic</code>, <code>.litematic</code> and structure <code>.nbt</code>, from 1.12.2 to the latest version.</p>
+      <ul>
+        <li><b>Train on builds from your worlds:</b> scrape them with Build Scraper (they save to Downloads), then in <b>Train</b> &rarr; &ldquo;Or use files Build Scraper saved&rdquo; tick them, give the kind a name and press <b>Use ticked files</b>. Zips of many files work too.</li>
+        <li><b>Look at a generated build in the Viewer:</b> press <b>Viewer</b> on a card.</li>
+        <li><b>Pick the file type</b> next to the download buttons: WorldEdit, WorldEdit 7.3+ (v3), Litematica or structure block.</li>
+        <li>Both programs are found automatically next to this one. If not, set their folder in the Control Center under Settings.</li>
+      </ul>
+
+      <h2>Realism sliders</h2>
+      <p>The <b>Realism</b> box adds finishing touches after the AI builds: <b>Weathering</b> (moss, cracks), <b>Block variety</b> (mixing similar blocks), <b>Exterior details</b> (path, lanterns, shutters), <b>Interior</b> (furniture, carpet, light), <b>Nature</b> (grass, flowers, bushes, vines) <b>Ruin</b> (missing blocks, broken windows, cobwebs) and <b>Physics</b> (parts without enough support fall and land as rubble; higher is stricter). Previews update as you drag; downloads and Install use the current values. Words like <i>abandoned</i>, <i>collapsed</i>, <i>mossy</i>, <i>cozy</i>, <i>overgrown</i> or <i>realistic</i> in your prompt set them for you. Older versions get stand-ins (torches instead of lanterns before 1.14).</p>
+
+      <h2>Writing prompts</h2>
+      <p>The prompt reader understands: structure (house, cottage, tower, castle, pyramid, temple, arch, gate, wall&hellip;), theme words (oak/wooden, spruce/dark/nordic, birch/white, desert/sand, cherry/pink/japanese), roofs (flat/modern, gable/pitched, hip/pyramid roof), sizes (small, big, tall, short, wide, narrow, <code>7x9</code>, <code>8 tall</code>), counts (<code>3 towers</code>, <code>a few huts</code>) and variety (<i>neat</i> or <i>varied</i>). Everything it picked up shows as chips under the prompt.</p>
+
+      <h2 id="help-minedojo">MineDojo: real renders + prompt matching (optional)</h2>
+      <p><a href="https://minedojo.org" target="_blank" rel="noopener">MineDojo</a> is NVIDIA's open Minecraft research framework. <b>Test in MineDojo</b> places every build inside its real Minecraft, films a 16-frame orbit around it, and lets <b>MineCLIP</b> (a video&ndash;text model trained on Minecraft YouTube) score how well each build matches your prompt. Cards then show real in-game screenshots and are sorted best match first.</p>
+      <p>MineDojo runs on Linux or macOS. On Windows, use WSL2:</p>
+      <ol>
+        <li>In PowerShell (admin): <code>wsl --install</code>, then open Ubuntu.</li>
+        <li>In Ubuntu: <code>sudo apt update &amp;&amp; sudo apt install -y openjdk-8-jdk xvfb python3.9 python3.9-venv</code></li>
+        <li><code>python3.9 -m venv ~/minedojo &amp;&amp; source ~/minedojo/bin/activate</code></li>
+        <li><code>pip install minedojo git+https://github.com/MineDojo/MineCLIP</code></li>
+        <li>Download the MineCLIP <b>attn</b> checkpoint (link in the MineCLIP README) and save it as <code>minedojo/attn.pth</code> in this folder.</li>
+        <li>That's it: this app finds <code>~/minedojo</code> inside WSL by itself. (Installed somewhere else? Put that Python in <a href="/control.html">Control Center</a> &rarr; Settings &rarr; MineDojo Python, e.g. <code>wsl /home/you/env/bin/python</code>; on Linux/macOS just the path to the Python.)</li>
+        <li>Check it: <button type="button" id="doctorBtn">Check MineDojo setup</button></li>
+      </ol>
+      <pre class="log" id="doctorOut" hidden></pre>
+      <p class="muted">The first run starts Minecraft and can take a few minutes. MineDojo uses Minecraft 1.11.2, so builds are placed with old-style block ids no matter which version you download.</p>
+
+      <h2>Teach it something new</h2>
+      <p><b>Easiest:</b> open the <b>Train</b> tab, give the kind of build a name (e.g. &ldquo;Windmill&rdquo;), drop in a few <code>.schem</code>, <code>.schematic</code> or <code>.nbt</code> files, then press <b>Train it now</b>. It learns from your examples and uses your blocks. Afterwards prompts like &ldquo;3 big windmills&rdquo; pick your new type. Upload more files under the same name at any time, then retrain.</p>
+      <p><b>By hand (rule-based):</b> copy a file in <code>src/structures/</code>, describe where walls, columns, roofs and openings go in its <code>zone()</code> function, register it in <code>src/structures/index.js</code>, restart this app and train it in the <b>Train</b> tab.</p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
